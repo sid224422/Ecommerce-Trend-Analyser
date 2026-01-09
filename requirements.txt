@@ -1,0 +1,14 @@
+# Core Dependencies
+pandas>=2.0.0
+
+# LLM Dependencies
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+
+# UI Dependencies
+streamlit>=1.28.0
+plotly>=5.17.0
+
+# Optional Dependencies
+# - python-firebase (optional, for Firestore)
+

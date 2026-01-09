@@ -1,0 +1,171 @@
+{
+  "timestamp": "2026-01-09T19:09:40.086877",
+  "total_records": 83,
+  "agent_outputs": [
+    {
+      "agent_name": "brand_agent",
+      "results": {
+        "total_unique_brands": 9,
+        "top_brands": [
+          {
+            "brand": "Samsung",
+            "count": 15,
+            "confidence": 0.1807
+          },
+          {
+            "brand": "Xiaomi",
+            "count": 12,
+            "confidence": 0.1446
+          },
+          {
+            "brand": "Apple",
+            "count": 11,
+            "confidence": 0.1325
+          },
+          {
+            "brand": "OnePlus",
+            "count": 9,
+            "confidence": 0.1084
+          },
+          {
+            "brand": "Realme",
+            "count": 8,
+            "confidence": 0.0964
+          },
+          {
+            "brand": "Oppo",
+            "count": 8,
+            "confidence": 0.0964
+          },
+          {
+            "brand": "Vivo",
+            "count": 8,
+            "confidence": 0.0964
+          },
+          {
+            "brand": "Motorola",
+            "count": 6,
+            "confidence": 0.0723
+          },
+          {
+            "brand": "Nokia",
+            "count": 6,
+            "confidence": 0.0723
+          }
+        ],
+        "total_records": 83
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:09:40.070617"
+    },
+    {
+      "agent_name": "pricing_agent",
+      "results": {
+        "total_records": 83,
+        "valid_price_records": 83,
+        "price_statistics": {
+          "min_price": 329.99,
+          "max_price": 1599.99,
+          "mean_price": 727.2189156626505,
+          "median_price": 649.99,
+          "std_price": 282.37802569886765
+        },
+        "optimal_price_range": {
+          "q1_price": 524.99,
+          "median_price": 649.99,
+          "q3_price": 874.99,
+          "optimal_range_min": 524.99,
+          "optimal_range_max": 874.99,
+          "optimal_range_span": 350.0
+        }
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:09:40.074255"
+    },
+    {
+      "agent_name": "feature_agent",
+      "results": {
+        "total_unique_features": 12,
+        "top_features": [
+          {
+            "feature": "5g",
+            "count": 58,
+            "confidence": 0.6988
+          },
+          {
+            "feature": "oled",
+            "count": 46,
+            "confidence": 0.5542
+          },
+          {
+            "feature": "128gb",
+            "count": 36,
+            "confidence": 0.4337
+          },
+          {
+            "feature": "wireless charging",
+            "count": 28,
+            "confidence": 0.3373
+          },
+          {
+            "feature": "4g",
+            "count": 25,
+            "confidence": 0.3012
+          },
+          {
+            "feature": "lcd",
+            "count": 25,
+            "confidence": 0.3012
+          },
+          {
+            "feature": "256gb",
+            "count": 17,
+            "confidence": 0.2048
+          },
+          {
+            "feature": "64gb",
+            "count": 12,
+            "confidence": 0.1446
+          },
+          {
+            "feature": "amoled",
+            "count": 12,
+            "confidence": 0.1446
+          },
+          {
+            "feature": "512gb",
+            "count": 9,
+            "confidence": 0.1084
+          },
+          {
+            "feature": "32gb",
+            "count": 5,
+            "confidence": 0.0602
+          },
+          {
+            "feature": "1tb",
+            "count": 4,
+            "confidence": 0.0482
+          }
+        ],
+        "total_records": 83,
+        "total_feature_mentions": 277
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:09:40.075472"
+    },
+    {
+      "agent_name": "gap_agent",
+      "results": {
+        "total_combinations": 55,
+        "identified_gaps_count": 0,
+        "top_gaps": [],
+        "total_records": 83,
+        "gap_threshold": -0.5
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:09:40.086848"
+    }
+  ],
+  "llm_summary": null
+}

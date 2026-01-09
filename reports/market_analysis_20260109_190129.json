@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-01-09T19:01:29.255935",
+  "total_records": 15,
+  "agent_outputs": [
+    {
+      "agent_name": "brand_agent",
+      "results": {
+        "total_unique_brands": 4,
+        "top_brands": [
+          {
+            "brand": "Samsung",
+            "count": 5,
+            "confidence": 0.3333
+          },
+          {
+            "brand": "Apple",
+            "count": 4,
+            "confidence": 0.2667
+          },
+          {
+            "brand": "Xiaomi",
+            "count": 4,
+            "confidence": 0.2667
+          },
+          {
+            "brand": "OnePlus",
+            "count": 2,
+            "confidence": 0.1333
+          }
+        ],
+        "total_records": 15
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:01:29.223380"
+    },
+    {
+      "agent_name": "pricing_agent",
+      "results": {
+        "total_records": 15,
+        "valid_price_records": 15,
+        "price_statistics": {
+          "min_price": 399.99,
+          "max_price": 1299.99,
+          "mean_price": 766.6566666666665,
+          "median_price": 749.99,
+          "std_price": 245.43450294955525
+        },
+        "optimal_price_range": {
+          "q1_price": 599.99,
+          "median_price": 749.99,
+          "q3_price": 899.99,
+          "optimal_range_min": 599.99,
+          "optimal_range_max": 899.99,
+          "optimal_range_span": 300.0
+        }
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:01:29.230242"
+    },
+    {
+      "agent_name": "feature_agent",
+      "results": {
+        "total_unique_features": 9,
+        "top_features": [
+          {
+            "feature": "5g",
+            "count": 9,
+            "confidence": 0.6
+          },
+          {
+            "feature": "oled",
+            "count": 9,
+            "confidence": 0.6
+          },
+          {
+            "feature": "128gb",
+            "count": 8,
+            "confidence": 0.5333
+          },
+          {
+            "feature": "4g",
+            "count": 6,
+            "confidence": 0.4
+          },
+          {
+            "feature": "lcd",
+            "count": 5,
+            "confidence": 0.3333
+          },
+          {
+            "feature": "64gb",
+            "count": 4,
+            "confidence": 0.2667
+          },
+          {
+            "feature": "256gb",
+            "count": 2,
+            "confidence": 0.1333
+          },
+          {
+            "feature": "512gb",
+            "count": 1,
+            "confidence": 0.0667
+          },
+          {
+            "feature": "amoled",
+            "count": 1,
+            "confidence": 0.0667
+          }
+        ],
+        "total_records": 15,
+        "total_feature_mentions": 45
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:01:29.232574"
+    },
+    {
+      "agent_name": "gap_agent",
+      "results": {
+        "total_combinations": 13,
+        "identified_gaps_count": 0,
+        "top_gaps": [],
+        "total_records": 15,
+        "gap_threshold": -0.5
+      },
+      "confidence": 1.0,
+      "timestamp": "2026-01-09T19:01:29.255912"
+    }
+  ],
+  "llm_summary": null
+}

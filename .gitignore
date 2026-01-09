@@ -1,0 +1,32 @@
+# Environment variables
+.env
+.env.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports (optional - uncomment if you don't want to track reports)
+# reports/*.json
+# reports/*.pdf
+
+# Test data (optional - uncomment if you don't want to track test data)
+# test_data.csv
+
