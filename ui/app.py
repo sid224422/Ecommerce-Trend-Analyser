@@ -11,6 +11,29 @@ from pathlib import Path
 import sys
 import json
 from datetime import datetime
+import os
+import tempfile
+
+# #region agent log
+# Debug logging setup
+DEBUG_LOG_PATH = Path(__file__).parent.parent / ".cursor" / "debug.log"
+def debug_log(location, message, data=None, hypothesis_id=None):
+    try:
+        import json as json_lib
+        log_entry = {
+            "timestamp": datetime.now().timestamp() * 1000,
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "sessionId": "debug-session",
+            "runId": "run1",
+            "hypothesisId": hypothesis_id
+        }
+        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json_lib.dumps(log_entry) + "\n")
+    except:
+        pass
+# #endregion
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -39,9 +62,18 @@ uploaded_file = st.file_uploader("Choose a CSV file", type=['csv'])
 if uploaded_file is not None:
     try:
         # Save uploaded file temporarily
-        temp_path = Path("temp_upload.csv")
+        # #region agent log
+        debug_log("ui/app.py:42", "Creating temp file", {"cwd": str(Path.cwd())}, "A")
+        # #endregion
+        temp_path = Path(tempfile.gettempdir()) / f"temp_upload_{os.getpid()}.csv"
+        # #region agent log
+        debug_log("ui/app.py:44", "Temp file path created", {"temp_path": str(temp_path), "exists": temp_path.exists()}, "A")
+        # #endregion
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
+        # #region agent log
+        debug_log("ui/app.py:47", "Temp file written", {"temp_path": str(temp_path), "size": temp_path.stat().st_size if temp_path.exists() else 0}, "A")
+        # #endregion
         
         # Ingest and validate
         df = read_csv_file(str(temp_path))
@@ -61,7 +93,13 @@ if uploaded_file is not None:
         # Run analysis
         if st.button("🚀 Run Analysis", type="primary"):
             with st.spinner("Running analytical agents..."):
+                # #region agent log
+                debug_log("ui/app.py:64", "Before run_all_agents", {"cleaned_df_rows": len(cleaned_df), "cleaned_df_cols": list(cleaned_df.columns)}, "C")
+                # #endregion
                 results = run_all_agents(cleaned_df)
+                # #region agent log
+                debug_log("ui/app.py:66", "After run_all_agents", {"results_keys": list(results.keys()) if results else None, "has_agents": "agents" in results if results else False}, "C")
+                # #endregion
             
             st.success("✅ Analysis complete!")
             
@@ -81,12 +119,30 @@ if uploaded_file is not None:
                 **Example:** If Samsung has 15 products out of 100 total, confidence = 15%
                 """)
             
+            # #region agent log
+            debug_log("ui/app.py:84", "Before accessing brand_result", {"results_has_agents": "agents" in results, "agents_keys": list(results.get("agents", {}).keys()) if results and "agents" in results else []}, "C")
+            # #endregion
             brand_result = results["agents"]["brand"]
+            # #region agent log
+            debug_log("ui/app.py:86", "After accessing brand_result", {"brand_result_keys": list(brand_result.keys()) if brand_result else None, "has_results": "results" in brand_result if brand_result else False}, "C")
+            # #endregion
             brand_data = brand_result["results"]["top_brands"]
+            # #region agent log
+            debug_log("ui/app.py:88", "Before creating brands_df", {"brand_data_type": type(brand_data).__name__, "brand_data_length": len(brand_data) if isinstance(brand_data, list) else "N/A"}, "D")
+            # #endregion
             
             # Table
             brands_df = pd.DataFrame(brand_data)
-            st.dataframe(brands_df[["brand", "count", "confidence"]])
+            # #region agent log
+            debug_log("ui/app.py:89", "After creating brands_df", {"brands_df_columns": list(brands_df.columns), "brands_df_shape": brands_df.shape}, "D")
+            # #endregion
+            try:
+                st.dataframe(brands_df[["brand", "count", "confidence"]])
+            except KeyError as e:
+                # #region agent log
+                debug_log("ui/app.py:92", "KeyError accessing brands_df columns", {"error": str(e), "available_columns": list(brands_df.columns)}, "D")
+                # #endregion
+                raise
             
             # Bar chart
             fig = px.bar(brands_df, x="brand", y="count", title="Brand Distribution")
@@ -94,6 +150,9 @@ if uploaded_file is not None:
             
             # Pricing Metrics
             st.header("💰 Pricing Analysis")
+            # #region agent log
+            debug_log("ui/app.py:97", "Before accessing pricing_result", {"results_has_agents": "agents" in results}, "C")
+            # #endregion
             pricing_result = results["agents"]["pricing"]
             stats = pricing_result["results"]["price_statistics"]
             optimal = pricing_result["results"]["optimal_price_range"]
@@ -127,7 +186,16 @@ if uploaded_file is not None:
             
             # Display as text/table
             features_df = pd.DataFrame(features)
-            st.dataframe(features_df[["feature", "count", "confidence"]])
+            # #region agent log
+            debug_log("ui/app.py:130", "After creating features_df", {"features_df_columns": list(features_df.columns), "features_df_shape": features_df.shape}, "D")
+            # #endregion
+            try:
+                st.dataframe(features_df[["feature", "count", "confidence"]])
+            except KeyError as e:
+                # #region agent log
+                debug_log("ui/app.py:132", "KeyError accessing features_df columns", {"error": str(e), "available_columns": list(features_df.columns)}, "D")
+                # #endregion
+                raise
             
             # Gap Analysis
             st.header("🔍 Market Gap Analysis")
@@ -147,7 +215,13 @@ if uploaded_file is not None:
                 - Then Samsung is missing a market opportunity!
                 """)
             
+            # #region agent log
+            debug_log("ui/app.py:150", "Before accessing gap_result", {"results_has_agents": "agents" in results}, "C")
+            # #endregion
             gap_result = results["agents"]["gap"]
+            # #region agent log
+            debug_log("ui/app.py:152", "After accessing gap_result", {"gap_result_keys": list(gap_result.keys()) if gap_result else None, "has_results": "results" in gap_result if gap_result else False}, "C")
+            # #endregion
             gaps = gap_result["results"]["top_gaps"]
             total_combinations = gap_result["results"]["total_combinations"]
             gaps_count = gap_result["results"]["identified_gaps_count"]
@@ -335,10 +409,32 @@ if uploaded_file is not None:
                 st.caption(f"Note: Could not save to reports directory: {str(e)[:100]}")
             
             # Cleanup temp file
+            # #region agent log
+            debug_log("ui/app.py:338", "Before temp file cleanup", {"temp_path": str(temp_path), "exists": temp_path.exists() if temp_path else False}, "B")
+            # #endregion
             try:
-                temp_path.unlink()
-            except:
+                if temp_path and temp_path.exists():
+                    temp_path.unlink()
+                    # #region agent log
+                    debug_log("ui/app.py:341", "Temp file deleted", {"temp_path": str(temp_path)}, "B")
+                    # #endregion
+            except Exception as cleanup_error:
+                # #region agent log
+                debug_log("ui/app.py:343", "Temp file cleanup failed", {"temp_path": str(temp_path), "error": str(cleanup_error)}, "B")
+                # #endregion
                 pass
     
     except Exception as e:
+        # #region agent log
+        debug_log("ui/app.py:343", "Exception caught in main try block", {"error_type": type(e).__name__, "error_message": str(e), "temp_path": str(temp_path) if 'temp_path' in locals() else "N/A", "temp_exists": temp_path.exists() if 'temp_path' in locals() and temp_path else False}, "E")
+        # #endregion
         st.error(f"❌ Error: {str(e)}")
+        # #region agent log
+        # Cleanup temp file on exception
+        if 'temp_path' in locals() and temp_path and temp_path.exists():
+            try:
+                temp_path.unlink()
+                debug_log("ui/app.py:349", "Temp file deleted after exception", {"temp_path": str(temp_path)}, "B")
+            except:
+                pass
+        # #endregion
