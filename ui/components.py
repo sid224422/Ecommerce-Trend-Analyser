@@ -1906,27 +1906,8 @@ def _column_mapping_widgets(df: pd.DataFrame) -> Dict[str, str]:
             """,
             unsafe_allow_html=True,
         )
-        st.caption("Auto-matched from column names. Open manual picks below if this looks wrong.")
-        with st.expander("Manual column override", expanded=False):
-            brand_column = st.selectbox(
-                "Brand column",
-                columns,
-                index=columns.index(b),
-                help="Manufacturer or product line (e.g. Samsung, Nike).",
-            )
-            price_column = st.selectbox(
-                "Price column",
-                columns,
-                index=columns.index(p),
-                help="Numeric amounts in INR (e.g. 1299.00).",
-            )
-            feature_column = st.selectbox(
-                "Feature column",
-                columns,
-                index=columns.index(f),
-                help="Specs or attributes (e.g. 5G+OLED, waterproof).",
-            )
-        return {"brand": brand_column, "price": price_column, "feature": feature_column}
+        st.caption("Auto-matched from column names.")
+        return {"brand": b, "price": p, "feature": f}
 
     st.warning("We could not match all three columns automatically.")
     brand_column = st.selectbox(
@@ -2051,6 +2032,17 @@ def create_analysis_parameters_sidebar() -> Dict[str, Any]:
     return _analysis_parameters_widgets()
 
 
+def _default_analysis_params() -> Dict[str, Any]:
+    """Balanced preset — used when Analysis engine UI is hidden."""
+    preset = ANALYSIS_PROFILES["Balanced"]
+    assert preset is not None
+    return {
+        "top_n_brands": preset[0],
+        "top_n_features": preset[1],
+        "gap_threshold": preset[2],
+    }
+
+
 def _export_options_widgets() -> Dict[str, bool]:
     st.markdown(
         '<p class="ts-section-lead">Configure report downloads on the '
@@ -2095,7 +2087,7 @@ def append_price_enrichment_notes(notes: List[str]) -> None:
 
 def render_workspace_sidebar(df: pd.DataFrame, uploaded_filename: str) -> WorkspaceSidebarSettings:
     """
-    Branded, sectioned sidebar: columns → prices → cleaning → analysis → export → AI.
+    Branded sidebar: columns → prices → export → AI (cleaning & analysis use defaults).
     """
     _render_workspace_sidebar_header()
 
@@ -2124,26 +2116,8 @@ def render_workspace_sidebar(df: pd.DataFrame, uploaded_filename: str) -> Worksp
         if price_mode == "live_shopping":
             st.info("Optional: set **SERPAPI_API_KEY** for Google Shopping India hints.")
 
-    with st.sidebar.expander("Data cleaning", expanded=False):
-        st.markdown(
-            '<p class="ts-section-lead">Applied immediately before agents run. '
-            "Duplicate rows are always removed.</p>",
-            unsafe_allow_html=True,
-        )
-        cleaning_strategy = st.selectbox(
-            "Missing values",
-            ["drop_rows", "drop_columns", "keep"],
-            index=0,
-            format_func=lambda x: {
-                "drop_rows": "Drop rows with any missing cell",
-                "drop_columns": "Drop columns that are mostly empty",
-                "keep": "Keep all rows (may reduce quality)",
-            }[x],
-            help="Choose how sparse cells are handled in the pipeline.",
-        )
-
-    with st.sidebar.expander("Analysis engine", expanded=True):
-        analysis_params = _analysis_parameters_widgets()
+    cleaning_strategy = "drop_rows"
+    analysis_params = _default_analysis_params()
 
     with st.sidebar.expander("Export & reports", expanded=False):
         export_options = _export_options_widgets()
