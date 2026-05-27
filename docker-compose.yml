@@ -1,0 +1,28 @@
+services:
+  trendscanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trendscanner-ai:latest
+    container_name: trendscanner-ai
+    ports:
+      - "8501:8501"
+
+    # API keys & config — never baked into the image.
+    # Copy .env.example → .env, fill in your keys, then run docker compose up.
+    env_file:
+      - .env
+
+    # reports/ is mounted so saved JSON/PDF files survive container restarts.
+    volumes:
+      - ./reports:/app/reports
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
