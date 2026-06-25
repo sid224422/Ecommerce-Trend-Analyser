@@ -4,6 +4,8 @@ UI Component Library for TrendScanner AI
 Reusable components for visualizations, metrics, and UI elements.
 """
 
+import os
+
 import streamlit as st
 import pandas as pd
 
@@ -2114,7 +2116,10 @@ def render_workspace_sidebar(df: pd.DataFrame, uploaded_filename: str) -> Worksp
             help="USD scale uses USD_TO_INR_RATE (default 83). Live mode needs SERPAPI_API_KEY in .env or secrets.",
         )
         if price_mode == "live_shopping":
-            st.info("Optional: set **SERPAPI_API_KEY** for Google Shopping India hints.")
+            st.info(
+                "Live mode fetches up to 10 product groups in parallel (cached on rerun). "
+                "Tune via SERPAPI_MAX_QUERIES / SERPAPI_MAX_WORKERS in .env."
+            )
 
     cleaning_strategy = "drop_rows"
     analysis_params = _default_analysis_params()
@@ -2124,14 +2129,19 @@ def render_workspace_sidebar(df: pd.DataFrame, uploaded_filename: str) -> Worksp
 
     with st.sidebar.expander("AI summary", expanded=False):
         st.markdown(
-            '<p class="ts-section-lead">Optional narrative from Gemini on the '
-            "<strong>AI summary</strong> tab. Requires GEMINI_API_KEY.</p>",
+            '<p class="ts-section-lead">Optional narrative from Groq (Llama) on the '
+            "<strong>AI summary</strong> tab. Requires GROQ_API_KEY in .env.</p>",
             unsafe_allow_html=True,
         )
+        groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+        if groq_key and groq_key not in ("your_groq_api_key_here", "your_api_key_here"):
+            st.caption("Groq API key detected.")
+        else:
+            st.warning("Set GROQ_API_KEY in .env (free at console.groq.com).")
         enable_llm = st.checkbox(
             "Generate AI executive summary",
             value=False,
-            help="Off by default — enable when your API key is configured.",
+            help="Off by default — enable when GROQ_API_KEY is configured.",
         )
 
     st.sidebar.markdown(

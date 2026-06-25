@@ -52,7 +52,7 @@ The Streamlit UI provides:
 The app automatically loads API key from:
 - `!.env` file (priority)
 - `.env` file (fallback)
-- Environment variable `GEMINI_API_KEY`
+- Environment variable `GROQ_API_KEY`
 
 ### Sidebar Settings
 - **Column Mapping**: Specify column names for brand, price, feature
@@ -86,7 +86,7 @@ The app automatically loads API key from:
 
 **API key issues:**
 - Check `!.env` or `.env` file exists
-- Verify API key format: `GEMINI_API_KEY=your_key_here`
+- Verify API key format: `GROQ_API_KEY=gsk_...` (from https://console.groq.com)
 - See `ENV_SETUP.md` for detailed setup
 
 **Visualizations not showing:**

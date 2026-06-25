@@ -14,14 +14,14 @@ pip install -r requirements.txt
 # Create .env file from template
 python setup_env.py create
 
-# Edit .env file and add your API key
-# Get API key from: https://ai.google.dev/gemini-api/docs/quickstart
+# Edit .env file and add your Groq API key
+# Get a free key from: https://console.groq.com
 ```
 
 **Option B: System Environment Variable**
 ```powershell
 # Windows PowerShell
-$env:GEMINI_API_KEY='your_api_key_here'
+$env:GROQ_API_KEY='your_groq_api_key_here'
 ```
 
 ### 3. Verify Setup
@@ -56,7 +56,7 @@ python test_full_pipeline.py
 /Final
   /agents          - Analytical agents (brand, pricing, feature, gap)
   /core            - Data ingestion and validation
-  /llm             - LLM summarization (Gemini)
+  /llm             - LLM summarization (Groq)
   /ui              - Streamlit UI (Phase 4)
   /reports         - Generated reports
   .env             - Environment variables (create from env_template.txt)
@@ -86,7 +86,7 @@ agent_outputs = [
     analyze_gaps(cleaned_df, brand_column="brand", feature_column="feature")
 ]
 
-# Summarize with LLM (requires GEMINI_API_KEY)
+# Summarize with LLM (requires GROQ_API_KEY)
 summary = summarize_agent_results(agent_outputs)
 print(summary['summary'])
 ```

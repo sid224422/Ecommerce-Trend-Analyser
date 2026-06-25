@@ -357,21 +357,24 @@ def render_analysis_results(
         st.markdown('<p class="mal-rv-section-label">Large language model</p>', unsafe_allow_html=True)
         st.markdown("##### AI summary")
         st.caption(
-            "Optional Gemini narrative — one call per generation. Numbers always come from the agent tabs."
+            "Optional Groq (Llama) narrative — one API call per generation. "
+            "Numbers always come from the agent tabs."
         )
 
         cached = results.get("llm_summary")
         with results_panel():
             if enable_llm:
                 if cached and cached.get("status") == "success":
-                    st.success("Summary cached for this run.")
+                    provider = cached.get("provider", "groq")
+                    model = cached.get("model", "—")
+                    st.success(f"Summary cached for this run ({provider}: {model}).")
                     st.markdown(cached["summary"])
                     if st.button("Regenerate summary", key="rv_llm_regen"):
                         results["llm_summary"] = None
                         st.rerun()
                 else:
                     if st.button("Generate summary", type="primary", key="rv_llm_gen"):
-                        with st.spinner("Calling Gemini…"):
+                        with st.spinner("Generating summary via Groq…"):
                             try:
                                 agent_outputs = [
                                     results["agents"]["brand"],
@@ -381,6 +384,11 @@ def render_analysis_results(
                                 ]
                                 summary_result = summarize_agent_results(agent_outputs)
                                 if summary_result.get("status") == "success":
+                                    if summary_result.get("warning"):
+                                        st.warning(summary_result["warning"][:500])
+                                    provider = summary_result.get("provider", "groq")
+                                    model = summary_result.get("model", "—")
+                                    st.caption(f"Provider: {provider} · Model: {model}")
                                     st.markdown(summary_result["summary"])
                                     results["llm_summary"] = summary_result
                                 else:

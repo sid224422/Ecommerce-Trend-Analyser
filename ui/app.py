@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 
@@ -41,15 +42,14 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# Load .env so SMTP, Gemini, SerpAPI keys are available to the UI
+# Load .env so SMTP, Groq, SerpAPI keys are available to the UI
 try:
     from dotenv import load_dotenv
 
     _env_alt = project_root / "!.env"
     if _env_alt.exists():
         load_dotenv(_env_alt, override=False)
-    else:
-        load_dotenv(project_root / ".env", override=False)
+    load_dotenv(project_root / ".env", override=False)
 except ImportError:
     pass
 
@@ -187,16 +187,40 @@ else:
         if "_mal_serp_price_cache" not in st.session_state:
             st.session_state["_mal_serp_price_cache"] = {}
 
-        df_work, _price_notes = apply_price_enrichment(
-            df,
-            column_mapping["brand"],
-            column_mapping["price"],
-            column_mapping["feature"],
-            mode=price_mode,
-            model_column=model_col,
-            serpapi_key=_serpapi_key(),
-            cache=st.session_state["_mal_serp_price_cache"],
+        enrich_key = (
+            f"{upload_sig}|{price_mode}|{column_mapping['brand']}|"
+            f"{column_mapping['price']}|{column_mapping['feature']}|{model_col or ''}"
         )
+        use_cached_enrichment = (
+            price_mode == "live_shopping"
+            and st.session_state.get("_mal_enrich_key") == enrich_key
+            and st.session_state.get("_mal_enriched_df") is not None
+        )
+
+        if use_cached_enrichment:
+            df_work = st.session_state["_mal_enriched_df"]
+            _price_notes = st.session_state.get("_mal_price_notes", [])
+        else:
+            enrich_spinner = (
+                "Fetching live retail prices (parallel SerpAPI)…"
+                if price_mode == "live_shopping"
+                else None
+            )
+            with st.spinner(enrich_spinner) if enrich_spinner else nullcontext():
+                df_work, _price_notes = apply_price_enrichment(
+                    df,
+                    column_mapping["brand"],
+                    column_mapping["price"],
+                    column_mapping["feature"],
+                    mode=price_mode,
+                    model_column=model_col,
+                    serpapi_key=_serpapi_key(),
+                    cache=st.session_state["_mal_serp_price_cache"],
+                )
+            if price_mode == "live_shopping":
+                st.session_state["_mal_enriched_df"] = df_work
+                st.session_state["_mal_enrich_key"] = enrich_key
+                st.session_state["_mal_price_notes"] = _price_notes
         append_price_enrichment_notes(_price_notes)
 
         left, right = st.columns([1.6, 1])

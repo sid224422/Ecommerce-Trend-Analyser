@@ -4,7 +4,7 @@
 
 This system is an academic project designed to analyze market data from CSV files and generate insights through deterministic analytical agents. The system follows a clear pipeline: data ingestion → validation → analysis → summarization.
 
-**Key Principle**: All computational analysis is performed using pure Python and Pandas. The LLM (Gemini) is used **only once** at the final stage to summarize pre-computed results into natural language.
+**Key Principle**: All computational analysis is performed using pure Python and Pandas. The LLM (Groq / Llama) is used **only once** at the final stage to summarize pre-computed results into natural language.
 
 ## 2. Architecture Components
 
@@ -47,7 +47,7 @@ Optional PDF Report
 **Agent Design Principle**: Each agent is deterministic, pure Python/Pandas-based, returns structured JSON, and has no AI dependencies.
 
 #### **LLM Layer** (`/llm`)
-- **summarizer.py**: Makes a single Gemini API call to summarize agent outputs
+- **summarizer.py**: Makes a single Groq API call to summarize agent outputs
 - **prompt.txt**: Fixed, versioned prompt template for consistent summarization
 - **Configuration**: Temperature ≤ 0.3, single call per analysis run
 
@@ -65,7 +65,7 @@ Optional PDF Report
 - **Data Processing**: Pandas
 - **Visualization**: Plotly (only visualization library)
 - **UI Framework**: Streamlit (local deployment)
-- **LLM**: Gemini 1.5 Flash (single call, temperature ≤ 0.3)
+- **LLM**: Groq (Llama 3.3 70B, single call, temperature ≤ 0.3)
 - **Optional Database**: Firebase Firestore (minimal usage, if needed)
 - **Containerization**: Docker (local only)
 

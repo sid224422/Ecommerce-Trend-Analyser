@@ -13,6 +13,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -21,6 +22,9 @@ _SERPAPI_URL = "https://serpapi.com/search.json"
 
 # Display/analytics assume amounts are INR in the UI; foreign CSVs often use USD-like magnitudes.
 DEFAULT_USD_TO_INR = float(os.environ.get("USD_TO_INR_RATE", "83.0"))
+DEFAULT_SERPAPI_TIMEOUT = float(os.environ.get("SERPAPI_TIMEOUT_SEC", "12"))
+DEFAULT_SERPAPI_MAX_QUERIES = int(os.environ.get("SERPAPI_MAX_QUERIES", "10"))
+DEFAULT_SERPAPI_MAX_WORKERS = int(os.environ.get("SERPAPI_MAX_WORKERS", "6"))
 
 
 def looks_like_usd_scale(prices: pd.Series) -> bool:
@@ -38,8 +42,13 @@ def scale_usd_to_inr(prices: pd.Series, rate: Optional[float] = None) -> pd.Seri
     return (s * r).round(2)
 
 
-def serpapi_google_shopping_first_inr(query: str, api_key: str, timeout: float = 28.0) -> Optional[float]:
+def serpapi_google_shopping_first_inr(
+    query: str,
+    api_key: str,
+    timeout: Optional[float] = None,
+) -> Optional[float]:
     """First Google Shopping India result price, or None. Requires SerpAPI key."""
+    t = timeout if timeout is not None else DEFAULT_SERPAPI_TIMEOUT
     params = urllib.parse.urlencode(
         {
             "engine": "google_shopping",
@@ -52,7 +61,7 @@ def serpapi_google_shopping_first_inr(query: str, api_key: str, timeout: float =
     url = f"{_SERPAPI_URL}?{params}"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "TrendScannerAI/1.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=t) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
         data = json.loads(raw)
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
@@ -102,14 +111,35 @@ def _parse_inr_amount(raw: Any) -> Optional[float]:
     return None
 
 
+def _first_feature_token(feature_text: str) -> str:
+    """First attribute token — groups similar SKUs for fewer API calls."""
+    if not feature_text:
+        return ""
+    for sep in (",", "|", ";"):
+        feature_text = feature_text.replace(sep, ",")
+    return feature_text.split(",")[0].strip()
+
+
 def _build_product_query(
     row: pd.Series,
     brand_col: str,
     feature_col: str,
     model_col: Optional[str],
+    *,
+    for_serpapi: bool = False,
 ) -> str:
     brand = str(row.get(brand_col, "")).strip()
     feat = str(row.get(feature_col, "")).strip()[:120]
+    category = str(row.get("category", "")).strip() if "category" in row.index else ""
+
+    if for_serpapi:
+        feat_short = _first_feature_token(feat)
+        parts = [p for p in (brand, category, feat_short) if p]
+        q = " ".join(parts).strip()
+        if len(q) >= 3:
+            return q
+        return feat_short or brand or "product"
+
     model = ""
     if model_col and model_col in row.index:
         model = str(row.get(model_col, "")).strip()
@@ -120,6 +150,34 @@ def _build_product_query(
     return feat or brand or "product"
 
 
+def _fetch_serpapi_batch(
+    queries: List[str],
+    api_key: str,
+    *,
+    max_workers: int,
+    timeout: float,
+) -> Dict[str, Optional[float]]:
+    """Fetch multiple shopping prices in parallel."""
+    if not queries:
+        return {}
+
+    workers = max(1, min(max_workers, len(queries)))
+    out: Dict[str, Optional[float]] = {}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(serpapi_google_shopping_first_inr, q, api_key, timeout): q
+            for q in queries
+        }
+        for future in as_completed(futures):
+            q = futures[future]
+            try:
+                out[q] = future.result()
+            except Exception:
+                out[q] = None
+    return out
+
+
 def apply_live_serpapi(
     df: pd.DataFrame,
     brand_col: str,
@@ -127,46 +185,74 @@ def apply_live_serpapi(
     feature_col: str,
     api_key: str,
     model_col: Optional[str] = None,
-    max_unique_queries: int = 22,
+    max_unique_queries: Optional[int] = None,
+    max_workers: Optional[int] = None,
     cache: Optional[Dict[str, float]] = None,
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
-    One SerpAPI call per unique product query (brand + model + feature text).
-    Rows without a hit keep their uploaded price — no fixed catalog band.
+    SerpAPI lookups for unique product queries (brand + category + primary feature).
+    Rows without a hit keep their uploaded price.
     """
     msgs: List[str] = []
     cache = cache if cache is not None else {}
+    cap = max_unique_queries if max_unique_queries is not None else DEFAULT_SERPAPI_MAX_QUERIES
+    workers = max_workers if max_workers is not None else DEFAULT_SERPAPI_MAX_WORKERS
+    timeout = DEFAULT_SERPAPI_TIMEOUT
+
     out = df.copy()
     original = pd.to_numeric(df[price_col], errors="coerce")
 
-    idx_to_q = {idx: _build_product_query(row, brand_col, feature_col, model_col) for idx, row in df.iterrows()}
+    idx_to_q = {
+        idx: _build_product_query(
+            row, brand_col, feature_col, model_col, for_serpapi=True
+        )
+        for idx, row in df.iterrows()
+    }
+
     unique_q: List[str] = []
-    seen = set()
-    for idx in df.index:
-        q = idx_to_q[idx]
+    seen: set[str] = set()
+    for q in idx_to_q.values():
         if q not in seen:
             seen.add(q)
             unique_q.append(q)
 
     live_by_q: Dict[str, float] = {}
-    api_calls = 0
+    to_fetch: List[str] = []
+
     for q in unique_q:
         if q in cache and cache[q] > 0:
             live_by_q[q] = float(cache[q])
+        elif q in cache and cache[q] <= 0:
             continue
-        if api_calls >= max_unique_queries:
-            continue
-        val = serpapi_google_shopping_first_inr(q, api_key)
-        api_calls += 1
-        if val is not None:
-            cache[q] = val
-            live_by_q[q] = val
-        else:
-            cache[q] = -1.0
+        elif len(to_fetch) < cap:
+            to_fetch.append(q)
 
-    if api_calls >= max_unique_queries and len(unique_q) > max_unique_queries:
+    cached_hits = len(live_by_q)
+    if to_fetch:
+        fetched = _fetch_serpapi_batch(
+            to_fetch, api_key, max_workers=workers, timeout=timeout
+        )
+        for q, val in fetched.items():
+            if val is not None:
+                cache[q] = val
+                live_by_q[q] = val
+            else:
+                cache[q] = -1.0
+
+    api_calls = len(to_fetch)
+    skipped = max(0, len(unique_q) - cached_hits - api_calls)
+
+    if skipped > 0:
         msgs.append(
-            f"Live lookup capped at {max_unique_queries} API calls; remaining SKUs keep uploaded prices."
+            f"Live lookup capped at {cap} new API call(s); "
+            f"{cached_hits} from cache; remaining SKUs keep uploaded prices."
+        )
+    elif cached_hits and not to_fetch:
+        msgs.append(f"Live prices loaded from cache ({cached_hits} product group(s)).")
+    else:
+        msgs.append(
+            f"Live Google Shopping (India): {api_calls} parallel lookup(s) "
+            f"({workers} workers, {timeout:.0f}s timeout each)."
         )
 
     for idx in df.index:
@@ -176,9 +262,6 @@ def apply_live_serpapi(
         else:
             out.at[idx, price_col] = original.loc[idx]
 
-    msgs.append(
-        f"Live Google Shopping (India): {api_calls} lookup(s); others unchanged from your CSV."
-    )
     return out, msgs
 
 
@@ -193,6 +276,8 @@ def apply_price_enrichment(
     serpapi_key: Optional[str] = None,
     cache: Optional[Dict[str, float]] = None,
     usd_to_inr_rate: Optional[float] = None,
+    max_unique_queries: Optional[int] = None,
+    max_workers: Optional[int] = None,
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
     mode:
@@ -210,7 +295,6 @@ def apply_price_enrichment(
     rate = usd_to_inr_rate if usd_to_inr_rate is not None else DEFAULT_USD_TO_INR
     key = serpapi_key or os.environ.get("SERPAPI_API_KEY")
 
-    # Backward compatibility with older sidebar keys
     if mode == "csv_auto":
         mode = "scale_usd_to_inr"
     if mode == "reference_catalog":
@@ -256,6 +340,8 @@ def apply_price_enrichment(
             key,
             model_col=model_column,
             cache=cache,
+            max_unique_queries=max_unique_queries,
+            max_workers=max_workers,
         )
         msgs.extend(live_msgs)
         return out, msgs
@@ -264,6 +350,5 @@ def apply_price_enrichment(
     return df.copy(), msgs
 
 
-# Backward-compatible name used by earlier UI iterations
 def apply_mobile_price_mode(*args: Any, **kwargs: Any) -> Tuple[pd.DataFrame, List[str]]:
     return apply_price_enrichment(*args, **kwargs)
