@@ -31,11 +31,16 @@ Thumbs.db
 .git/
 .gitignore
 
-# Logs
+# Logs & debug
 *.log
+.cursor/
+debug.log
 
-# Test CSV files (large; not needed at runtime)
-test_*.csv
+# Large local test CSVs (demo file copied explicitly in Dockerfile)
+test_trendscanner_full_coverage_inr.csv
+test_trendscanner_biscuits_inr.csv
+test_data.csv
+test_data_comprehensive.csv
 
 # Docker files themselves (no need to copy into image)
 Dockerfile

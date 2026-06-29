@@ -1,3 +1,9 @@
+# TrendScanner AI — Docker Desktop / Compose
+# 1. Copy .env.example → .env and add GROQ_API_KEY (and optional SERPAPI / SMTP keys)
+# 2. docker compose build
+# 3. docker compose up -d
+# 4. Open http://localhost:8501
+
 services:
   trendscanner:
     build:
@@ -8,21 +14,31 @@ services:
     ports:
       - "8501:8501"
 
-    # API keys & config — never baked into the image.
-    # Copy .env.example → .env, fill in your keys, then run docker compose up.
+    # Keys are loaded at runtime — never baked into the image.
     env_file:
-      - .env
+      - path: .env
+        required: false
 
-    # reports/ is mounted so saved JSON/PDF files survive container restarts.
+    environment:
+      # Defaults when .env is missing (override in .env)
+      LLM_ALLOW_LOCAL_FALLBACK: "true"
+      WHATSAPP_DEFAULT_COUNTRY_CODE: "91"
+
     volumes:
+      # Persist exported JSON/PDF from the UI
       - ./reports:/app/reports
 
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=5)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
